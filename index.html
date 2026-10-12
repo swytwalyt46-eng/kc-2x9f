@@ -1,0 +1,1138 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}</style></head><body>
+<title>حضور ودرجات الطلبة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one working surface per tab under a sticky tab bar; the grades table is the main surface, the scanner is a two-column desk on wide screens. */
+:root{
+  --bg:#f2f5f7; --surface:#ffffff; --surface2:#e9eff3; --head:#e1e9ee;
+  --fg:#12202b; --muted:#566774; --line:#d2dbe2;
+  --accent:#0e6a86; --accent-ink:#ffffff; --accent-soft:#dbecf2;
+  --ok:#17784a; --ok-bg:#dff3e7; --warn:#bf2a1f; --warn-bg:#fde8e6; --amber:#8a5700; --amber-bg:#fcefd0;
+  --f-ui:"IBM Plex Sans Arabic","Segoe UI",Tahoma,"Noto Sans Arabic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e161c; --surface:#16212a; --surface2:#1c2a35; --head:#1d2c37;
+    --fg:#e5edf2; --muted:#94a5b1; --line:#2a3a46;
+    --accent:#58b9d8; --accent-ink:#06222c; --accent-soft:#17323d;
+    --ok:#55d08e; --ok-bg:#12301f; --warn:#ff857a; --warn-bg:#3b1a17; --amber:#f0b955; --amber-bg:#35290f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e161c; --surface:#16212a; --surface2:#1c2a35; --head:#1d2c37;
+  --fg:#e5edf2; --muted:#94a5b1; --line:#2a3a46;
+  --accent:#58b9d8; --accent-ink:#06222c; --accent-soft:#17323d;
+  --ok:#55d08e; --ok-bg:#12301f; --warn:#ff857a; --warn-bg:#3b1a17; --amber:#f0b955; --amber-bg:#35290f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:14px;line-height:1.55}
+button,input,select{font:inherit;color:inherit}
+.shell{max-width:1280px;margin-inline:auto;padding-inline:16px;padding-block:0 40px}
+.brand{display:flex;align-items:center;gap:12px;padding-block:18px 12px}
+.brand svg{width:34px;height:34px;color:var(--accent);flex:none}
+.brand h1{margin:0;font-size:20px;font-weight:700;line-height:1.2;text-wrap:balance}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:flex;gap:4px;background:var(--bg);padding-block:8px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:1 1 0;min-height:40px;padding:6px 8px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-weight:600;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.tabs button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,.att:focus-visible,.lnk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#banner{margin-top:12px;padding:10px 14px;border-radius:8px;background:var(--amber-bg);color:var(--amber);font-weight:500}
+main{padding-top:16px}
+h2{font-size:16px;margin:0 0 10px;font-weight:700}
+.muted{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end;margin-bottom:12px}
+.fld{display:flex;flex-direction:column;gap:3px;min-width:0}
+.fld>span{font-size:12px;color:var(--muted);font-weight:500}
+select,input[type=text],input[type=search],input[type=number],input[type=date]{min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0}
+.btn{min-height:40px;padding:6px 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--warn)}
+.btn[disabled]{opacity:.5;cursor:default}
+.lnk{border:0;background:none;color:var(--accent);cursor:pointer;padding:2px 4px;text-decoration:underline;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{padding:3px 10px;border-radius:99px;background:var(--surface2);font-size:13px;font-variant-numeric:tabular-nums}
+.chip.warn{background:var(--warn-bg);color:var(--warn);font-weight:600}
+.hint{padding:10px 14px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);margin-bottom:12px}
+
+/* scanner */
+.desk{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);grid-template-areas:"res" "cap" "rec"}
+.desk .res{grid-area:res}.desk .cap{grid-area:cap}.desk .rec{grid-area:rec}
+@media (min-width:900px){.desk{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"cap res" "cap rec";align-items:start;gap:16px}}
+@media (max-width:600px){.cam{max-height:230px}}
+.tip{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.panel{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px;min-width:0}
+.cam{position:relative;aspect-ratio:4/3;max-height:320px;width:100%;border-radius:8px;background:#0b1217;overflow:hidden;display:grid;place-items:center;color:#9fb3c0;text-align:center;padding:12px}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam .frame{position:absolute;inset:18%;border:2px solid rgba(255,255,255,.75);border-radius:10px;pointer-events:none}
+#camMsg{margin:8px 0 0;font-size:13px;color:var(--amber)}
+.result{border-radius:10px;padding:18px 16px;min-height:112px;display:flex;flex-direction:column;justify-content:center;gap:4px;background:var(--surface2)}
+.result b{font-size:24px;line-height:1.3;text-wrap:balance}
+.result span{font-size:14px}
+.result .id{font-family:var(--f-mono),var(--f-ui);font-size:13px;opacity:.85}
+.result.ok{background:var(--ok-bg);color:var(--ok)}
+.result.dup{background:var(--amber-bg);color:var(--amber)}
+.result.bad{background:var(--warn-bg);color:var(--warn)}
+.result.idle{color:var(--muted)}
+.count{margin:14px 0 6px;font-size:15px}
+.count b{font-size:22px;font-variant-numeric:tabular-nums}
+#recent{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+#recent li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);min-width:0}
+#recent li span{min-width:0;overflow-wrap:anywhere}
+.sugg{display:flex;flex-direction:column;margin-top:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.sugg:empty{display:none}
+.sugg button{text-align:start;border:0;border-bottom:1px solid var(--line);background:var(--surface);padding:8px 12px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.sugg button:last-child{border-bottom:0}
+.sugg button:hover{background:var(--accent-soft)}
+.sugg i{font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+/* grades table */
+.tablewrap{overflow:auto;max-height:min(72vh,900px);border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table.g{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+.g th,.g td{padding:4px 6px;border-bottom:1px solid var(--line);border-inline-start:1px solid var(--line);text-align:center;white-space:nowrap;background:var(--surface);font-variant-numeric:tabular-nums}
+.g thead th{position:sticky;top:0;z-index:3;background:var(--head);font-weight:600}
+.g thead tr.r1 th{height:34px}
+.g thead tr.r2 th{top:34px;vertical-align:top;padding-block:6px}
+.g .sq{position:sticky;inset-inline-start:0;width:44px;min-width:44px;z-index:2;color:var(--muted)}
+.g .nm{position:sticky;inset-inline-start:44px;min-width:190px;text-align:start;z-index:2}
+.g thead .sq,.g thead .nm{z-index:5}
+.g tr.flag td.nm{color:var(--warn);background:var(--warn-bg);font-weight:700}
+.g tr.flag .c-abs{color:var(--warn);font-weight:700}
+.g .sc{font-weight:600;min-width:64px}
+.g .c-tot{background:var(--accent-soft);color:var(--fg);font-weight:700;min-width:72px}
+.g .att{cursor:pointer;min-width:58px;user-select:none;color:var(--muted)}
+.g .att.p{background:var(--ok-bg);color:var(--ok);font-weight:700}
+.g .off{opacity:.45;background-image:repeating-linear-gradient(135deg,transparent 0 6px,var(--line) 6px 7px)}
+.g td input{width:64px;min-height:30px;padding:2px 4px;text-align:center;border:1px solid transparent;background:transparent;border-radius:6px}
+.g td input:hover{border-color:var(--line)}
+.g td input:focus{border-color:var(--accent);background:var(--surface)}
+.g td input.bad{border-color:var(--warn);color:var(--warn)}
+.hd{display:flex;flex-direction:column;align-items:center;gap:4px}
+.hd input{min-height:30px;padding:2px 6px;font-size:12px}
+.hd input[type=date]{width:128px}
+.hd input.ttl{width:104px;text-align:center}
+.hd input.mx{width:52px;text-align:center}
+.hd .mini{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)}
+.mini button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:1px 8px;cursor:pointer;font-size:12px;min-height:26px}
+.mini button.x{color:var(--warn)}
+.mini button.onbtn[aria-pressed="true"]{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+/* students */
+table.l{width:100%;border-collapse:collapse}
+.l th,.l td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:start}
+.l th{background:var(--head);font-weight:600;position:sticky;top:0}
+.l .mono{font-family:var(--f-mono);font-size:13px}
+.l td.acts{white-space:nowrap;text-align:end}
+.sect{margin-bottom:28px;max-width:720px}
+.sect p{margin:0 0 10px;color:var(--muted)}
+.grid2{display:grid;gap:10px 14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+#status{color:var(--muted);font-size:13px;margin-top:8px;min-height:20px}
+
+/* modal + toast */
+#modal{position:fixed;inset:0;z-index:100;background:rgba(8,14,18,.55);display:grid;place-items:center;padding:16px}
+.box{background:var(--surface);color:var(--fg);border-radius:12px;padding:18px;width:min(440px,100%);max-height:90%;overflow:auto;border:1px solid var(--line)}
+.box h3{margin:0 0 10px;font-size:17px}
+.box .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.qrbox{display:grid;place-items:center;gap:8px;text-align:center}
+.qrbox canvas{max-width:100%;height:auto;background:#fff;border-radius:6px}
+#toast{position:fixed;inset-inline:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:120;display:flex;justify-content:center;pointer-events:none}
+#toast div{background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:99px;font-weight:500;max-width:100%}
+@media (prefers-reduced-motion:no-preference){.result{transition:background-color .15s}}
+</style>
+
+<div class="shell" dir="rtl" lang="ar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3h5M10.5 3v6L5 18.2A1.9 1.9 0 0 0 6.7 21h10.6a1.9 1.9 0 0 0 1.7-2.8L13.5 9V3"/><path d="M7.6 15h8.8"/></svg>
+    <div><h1>حضور ودرجات الطلبة</h1><p id="sub"></p></div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="الأقسام">
+    <button role="tab" data-tab="scan">الحضور</button>
+    <button role="tab" data-tab="grades">الدرجات</button>
+    <button role="tab" data-tab="students">الطلبة</button>
+    <button role="tab" data-tab="settings">الإعدادات</button>
+  </nav>
+  <div id="banner" hidden></div>
+  <main id="view"></main>
+</div>
+<div id="modal" hidden></div>
+<div id="toast" aria-live="polite"></div>
+
+<script>
+/* Scoring core: pure functions, no DOM. */
+var CORE = (function () {
+  function num(v) {
+    if (v === undefined || v === null || v === "") return null;
+    var n = Number(v);
+    return isFinite(n) ? n : null;
+  }
+  function r2(x) { return Math.round(x * 100) / 100; }
+  function on(x) { return x.on !== false; }
+
+  function activeDays(cls) { return (cls.days || []).filter(on); }
+
+  // share of each item: score/max clamped to 0..1, averaged, times the component weight
+  function share(items, rec, weight) {
+    var list = (items || []).filter(on);
+    if (!list.length) return 0;
+    var sum = 0;
+    list.forEach(function (it) {
+      var v = num(rec && rec[it.id]);
+      var mx = it.max > 0 ? it.max : 1;
+      var ratio = (v === null ? 0 : v) / mx;
+      sum += Math.min(Math.max(ratio, 0), 1);
+    });
+    return (sum / list.length) * weight;
+  }
+
+  function score(state, cls, sid) {
+    var S = state.settings;
+    var days = activeDays(cls);
+    var a = (state.att && state.att[sid]) || {};
+    var present = days.filter(function (d) { return a[d.id]; }).length;
+    var att = days.length ? (present / days.length) * S.wAtt : 0;
+    var hw = share(cls.hws, state.hw && state.hw[sid], S.wHw);
+    var ex = share(cls.exs, state.ex && state.ex[sid], S.wEx);
+    var absPct = days.length ? ((days.length - present) / days.length) * 100 : 0;
+    return {
+      present: present,
+      days: days.length,
+      att: att,
+      hw: hw,
+      ex: ex,
+      total: att + hw + ex,
+      absPct: absPct,
+      flagged: days.length > 0 && absPct >= S.absLimit
+    };
+  }
+
+  function normCode(s) {
+    return String(s == null ? "" : s)
+      .replace(/[٠-٩]/g, function (c) { return String(c.charCodeAt(0) - 0x0660); })
+      .replace(/[۰-۹]/g, function (c) { return String(c.charCodeAt(0) - 0x06F0); })
+      .trim();
+  }
+
+  function nextId(students, cls) {
+    var used = {};
+    var max = 0;
+    students.forEach(function (s) {
+      used[s.id] = 1;
+      if (s.cls === cls.id && s.seq > max) max = s.seq;
+    });
+    var seq = max + 1;
+    var id = "2" + cls.no + ("00" + seq).slice(-3);
+    while (used[id]) { seq++; id = "2" + cls.no + ("00" + seq).slice(-3); }
+    return { id: id, seq: seq };
+  }
+
+  return { num: num, r2: r2, activeDays: activeDays, score: score, normCode: normCode, nextId: nextId };
+})();
+if (typeof module !== "undefined") module.exports = CORE;
+
+</script>
+<script>
+(function () {
+  "use strict";
+  document.documentElement.lang = "ar";
+  document.documentElement.dir = "rtl";
+
+  var SEED = {"classes": [{"study": "صباحي", "group": "A", "section": "عملي 1", "id": "c1", "no": 1, "days": [], "hws": [], "exs": []}, {"study": "صباحي", "group": "A", "section": "عملي 2", "id": "c2", "no": 2, "days": [], "hws": [], "exs": []}, {"study": "صباحي", "group": "B", "section": "عملي 1", "id": "c3", "no": 3, "days": [], "hws": [], "exs": []}, {"study": "صباحي", "group": "B", "section": "عملي 2", "id": "c4", "no": 4, "days": [], "hws": [], "exs": []}], "students": [{"id": "21001", "cls": "c1", "seq": 1, "name": "افنان نجيب محمد"}, {"id": "21002", "cls": "c1", "seq": 2, "name": "امل محمد عبد صائل"}, {"id": "21003", "cls": "c1", "seq": 3, "name": "امنة وليد نوري"}, {"id": "21004", "cls": "c1", "seq": 4, "name": "اية ادريس خليل"}, {"id": "21005", "cls": "c1", "seq": 5, "name": "اية عباس عبد الجبار"}, {"id": "21006", "cls": "c1", "seq": 6, "name": "اية علي فاضل"}, {"id": "21007", "cls": "c1", "seq": 7, "name": "اية مرسل مجول"}, {"id": "21008", "cls": "c1", "seq": 8, "name": "ايمان قصي معين"}, {"id": "21009", "cls": "c1", "seq": 9, "name": "أبراهيم احمد فؤاد"}, {"id": "21010", "cls": "c1", "seq": 10, "name": "جنات عدنان عباس"}, {"id": "21011", "cls": "c1", "seq": 11, "name": "جنات محمد جلال"}, {"id": "21012", "cls": "c1", "seq": 12, "name": "جنة عبدالله عبد الرحمن"}, {"id": "21013", "cls": "c1", "seq": 13, "name": "ختام علي عبد"}, {"id": "21014", "cls": "c1", "seq": 14, "name": "دانيا نظام رشيد"}, {"id": "21015", "cls": "c1", "seq": 15, "name": "دمت زين العابدين"}, {"id": "21016", "cls": "c1", "seq": 16, "name": "دينا هيمن غفور"}, {"id": "21017", "cls": "c1", "seq": 17, "name": "رحاب روكان صالح"}, {"id": "21018", "cls": "c1", "seq": 18, "name": "زهراء اسعد زين العابدين"}, {"id": "21019", "cls": "c1", "seq": 19, "name": "زهراء حسين حمدي"}, {"id": "21020", "cls": "c1", "seq": 20, "name": "زينب احمد محمد"}, {"id": "21021", "cls": "c1", "seq": 21, "name": "زينب عدنان ابراهيم"}, {"id": "21022", "cls": "c1", "seq": 22, "name": "زينة فؤاد شاكر"}, {"id": "21023", "cls": "c1", "seq": 23, "name": "سبأ رعد احمد"}, {"id": "21024", "cls": "c1", "seq": 24, "name": "سمية مقداد قادر"}, {"id": "21025", "cls": "c1", "seq": 25, "name": "سوزان ريان حيدر"}, {"id": "21026", "cls": "c1", "seq": 26, "name": "سيلدا اردال خليل"}, {"id": "21027", "cls": "c1", "seq": 27, "name": "سيما نوزاد زياد"}, {"id": "21028", "cls": "c1", "seq": 28, "name": "طيبة سلمان خضير"}, {"id": "21029", "cls": "c1", "seq": 29, "name": "طيبة وليد صابر"}, {"id": "21030", "cls": "c1", "seq": 30, "name": "عائشة احمد عمر"}, {"id": "21031", "cls": "c1", "seq": 31, "name": "عائشة انور حسين"}, {"id": "21032", "cls": "c1", "seq": 32, "name": "عبير صفاء عزام"}, {"id": "21033", "cls": "c1", "seq": 33, "name": "علي زياد عبدين"}, {"id": "21034", "cls": "c1", "seq": 34, "name": "علي صدام قاسم"}, {"id": "21035", "cls": "c1", "seq": 35, "name": "عمار عبد الستار احمد"}, {"id": "21036", "cls": "c1", "seq": 36, "name": "فاطمة عمار مهدي"}, {"id": "21037", "cls": "c1", "seq": 37, "name": "فاطمة موسى بكتاش"}, {"id": "21038", "cls": "c1", "seq": 38, "name": "فدك حسن عبدالله"}, {"id": "21039", "cls": "c1", "seq": 39, "name": "لنيا لطيف رحيم"}, {"id": "21040", "cls": "c1", "seq": 40, "name": "محمد احمد صادق"}, {"id": "21041", "cls": "c1", "seq": 41, "name": "محمد حمد محمد"}, {"id": "21042", "cls": "c1", "seq": 42, "name": "مريم احسان مسعود"}, {"id": "21043", "cls": "c1", "seq": 43, "name": "مسلم عقيل علي"}, {"id": "21044", "cls": "c1", "seq": 44, "name": "موج عبدالله صالح"}, {"id": "21045", "cls": "c1", "seq": 45, "name": "مينا رعد طلال"}, {"id": "21046", "cls": "c1", "seq": 46, "name": "ناز صلاح شلال"}, {"id": "21047", "cls": "c1", "seq": 47, "name": "نبأ ثائر عصمت"}, {"id": "21048", "cls": "c1", "seq": 48, "name": "نور مطلك حسين"}, {"id": "21049", "cls": "c1", "seq": 49, "name": "هاجر شجاع عزاوي"}, {"id": "21050", "cls": "c1", "seq": 50, "name": "هدى رائد عدنان"}, {"id": "21051", "cls": "c1", "seq": 51, "name": "هيلند مقداد فيروز"}, {"id": "21052", "cls": "c1", "seq": 52, "name": "هيلين عمر علي"}, {"id": "21053", "cls": "c1", "seq": 53, "name": "وسن جاسم خلف"}, {"id": "21054", "cls": "c1", "seq": 54, "name": "وعد حسين حمد"}, {"id": "21055", "cls": "c1", "seq": 55, "name": "يونس محمود خضر"}, {"id": "21056", "cls": "c1", "seq": 56, "name": "ئاڤان هيوا حميد"}, {"id": "22001", "cls": "c2", "seq": 1, "name": "احسان نجدت ناجي"}, {"id": "22002", "cls": "c2", "seq": 2, "name": "احمد حميد محمد"}, {"id": "22003", "cls": "c2", "seq": 3, "name": "احمد قيصر عداي"}, {"id": "22004", "cls": "c2", "seq": 4, "name": "احمد نشأت نهاد"}, {"id": "22005", "cls": "c2", "seq": 5, "name": "ارزو رائد محمد"}, {"id": "22006", "cls": "c2", "seq": 6, "name": "ازل جمعة عادل"}, {"id": "22007", "cls": "c2", "seq": 7, "name": "اسماء زيرك فتاح"}, {"id": "22008", "cls": "c2", "seq": 8, "name": "انس سعدون عزيز"}, {"id": "22009", "cls": "c2", "seq": 9, "name": "ايمان قصي معين"}, {"id": "22010", "cls": "c2", "seq": 10, "name": "ايناس مراد عبد الستار"}, {"id": "22011", "cls": "c2", "seq": 11, "name": "أوآت محسن كريم"}, {"id": "22012", "cls": "c2", "seq": 12, "name": "أيلاف حمزة غالب"}, {"id": "22013", "cls": "c2", "seq": 13, "name": "بانة جمعة عبدالله"}, {"id": "22014", "cls": "c2", "seq": 14, "name": "بانه اكرم عبدالله"}, {"id": "22015", "cls": "c2", "seq": 15, "name": "تبارك رياض عواد"}, {"id": "22016", "cls": "c2", "seq": 16, "name": "تبارك محمد عبدالله"}, {"id": "22017", "cls": "c2", "seq": 17, "name": "دانة عبد الجبار ستار"}, {"id": "22018", "cls": "c2", "seq": 18, "name": "ديارياسين محمد"}, {"id": "22019", "cls": "c2", "seq": 19, "name": "رانيا اكرم حسين"}, {"id": "22020", "cls": "c2", "seq": 20, "name": "رسل مهند عبد عصفور"}, {"id": "22021", "cls": "c2", "seq": 21, "name": "رقية سرمد عمر"}, {"id": "22022", "cls": "c2", "seq": 22, "name": "رنا نوري زيدان"}, {"id": "22023", "cls": "c2", "seq": 23, "name": "رواء فلاح حسن"}, {"id": "22024", "cls": "c2", "seq": 24, "name": "زهراء احمد سامي"}, {"id": "22025", "cls": "c2", "seq": 25, "name": "زينب علي احمد"}, {"id": "22026", "cls": "c2", "seq": 26, "name": "سبأ عدنان صالح"}, {"id": "22027", "cls": "c2", "seq": 27, "name": "سنور محمد امين"}, {"id": "22028", "cls": "c2", "seq": 28, "name": "شانيا هلو كاظم"}, {"id": "22029", "cls": "c2", "seq": 29, "name": "شروق صباح سعيد"}, {"id": "22030", "cls": "c2", "seq": 30, "name": "شهين شيرزاد رشيد"}, {"id": "22031", "cls": "c2", "seq": 31, "name": "صفية باعث اسود"}, {"id": "22032", "cls": "c2", "seq": 32, "name": "صفية رياض ابراهيم"}, {"id": "22033", "cls": "c2", "seq": 33, "name": "طيبة ابراهيم مخلف"}, {"id": "22034", "cls": "c2", "seq": 34, "name": "عبد الرحمن محمد فليح"}, {"id": "22035", "cls": "c2", "seq": 35, "name": "عذراء صاحب صالح"}, {"id": "22036", "cls": "c2", "seq": 36, "name": "علي احمد عثمان"}, {"id": "22037", "cls": "c2", "seq": 37, "name": "علي مجول الياس"}, {"id": "22038", "cls": "c2", "seq": 38, "name": "فاضل مصطفى حمود"}, {"id": "22039", "cls": "c2", "seq": 39, "name": "فاطمة ابراهيم هذال"}, {"id": "22040", "cls": "c2", "seq": 40, "name": "لةنيا بيستون خورشيد"}, {"id": "22041", "cls": "c2", "seq": 41, "name": "مريم وعد محمود"}, {"id": "22042", "cls": "c2", "seq": 42, "name": "مي عبد القادر محمد"}, {"id": "22043", "cls": "c2", "seq": 43, "name": "نبأ عمر ياسين"}, {"id": "22044", "cls": "c2", "seq": 44, "name": "نور حازم دلو"}, {"id": "22045", "cls": "c2", "seq": 45, "name": "نور عبد الستار حسين"}, {"id": "22046", "cls": "c2", "seq": 46, "name": "هدية عبد الوهاب احمد"}, {"id": "22047", "cls": "c2", "seq": 47, "name": "هديل كامل حساني"}, {"id": "22048", "cls": "c2", "seq": 48, "name": "همام فاضل عبدالله"}, {"id": "22049", "cls": "c2", "seq": 49, "name": "وجدان حمد زيدان"}, {"id": "23001", "cls": "c3", "seq": 1, "name": "ابراهيم احسين محمد"}, {"id": "23002", "cls": "c3", "seq": 2, "name": "احمد زياد خلف"}, {"id": "23003", "cls": "c3", "seq": 3, "name": "ازهار محمود سليمان"}, {"id": "23004", "cls": "c3", "seq": 4, "name": "الاء حسين حسن"}, {"id": "23005", "cls": "c3", "seq": 5, "name": "الاء منذر غربي"}, {"id": "23006", "cls": "c3", "seq": 6, "name": "اميرة ثائر حسن"}, {"id": "23007", "cls": "c3", "seq": 7, "name": "اميمة رؤوف كريم"}, {"id": "23008", "cls": "c3", "seq": 8, "name": "اية سعد منسي"}, {"id": "23009", "cls": "c3", "seq": 9, "name": "اية نجدت حبيب"}, {"id": "23010", "cls": "c3", "seq": 10, "name": "اية هاشم محمد"}, {"id": "23011", "cls": "c3", "seq": 11, "name": "بانو سوران قادر"}, {"id": "23012", "cls": "c3", "seq": 12, "name": "براء حميد عبدالله"}, {"id": "23013", "cls": "c3", "seq": 13, "name": "بيداء اياد جليل"}, {"id": "23014", "cls": "c3", "seq": 14, "name": "بيداء خالد شلاو"}, {"id": "23015", "cls": "c3", "seq": 15, "name": "حسين علي محمد علي"}, {"id": "23016", "cls": "c3", "seq": 16, "name": "حوراء يوسف عباس"}, {"id": "23017", "cls": "c3", "seq": 17, "name": "رامي نوفل مرعي"}, {"id": "23018", "cls": "c3", "seq": 18, "name": "رغد طالع طيب"}, {"id": "23019", "cls": "c3", "seq": 19, "name": "رغدة نجم عبدالله"}, {"id": "23020", "cls": "c3", "seq": 20, "name": "زهراء محسن شلش"}, {"id": "23021", "cls": "c3", "seq": 21, "name": "زينب عباس حمد"}, {"id": "23022", "cls": "c3", "seq": 22, "name": "سارة عبدالعزيز قاسم"}, {"id": "23023", "cls": "c3", "seq": 23, "name": "سماء اريان كامل"}, {"id": "23024", "cls": "c3", "seq": 24, "name": "سولاف محمد رؤوف"}, {"id": "23025", "cls": "c3", "seq": 25, "name": "سيف الدين مهند خزعل"}, {"id": "23026", "cls": "c3", "seq": 26, "name": "شيماء علي شهاب"}, {"id": "23027", "cls": "c3", "seq": 27, "name": "طيبة عبد الكريم بدر"}, {"id": "23028", "cls": "c3", "seq": 28, "name": "عبد الرحمان مهيدي صالح"}, {"id": "23029", "cls": "c3", "seq": 29, "name": "علي احمد ناصر"}, {"id": "23030", "cls": "c3", "seq": 30, "name": "عياده عبدالله فاضل"}, {"id": "23031", "cls": "c3", "seq": 31, "name": "فاطمة جواد جاسم"}, {"id": "23032", "cls": "c3", "seq": 32, "name": "فردوس دحام عبد القادر"}, {"id": "23033", "cls": "c3", "seq": 33, "name": "لافي راوي احمد"}, {"id": "23034", "cls": "c3", "seq": 34, "name": "محمد سعدون احمد"}, {"id": "23035", "cls": "c3", "seq": 35, "name": "محمد ندى راكان"}, {"id": "23036", "cls": "c3", "seq": 36, "name": "مريم اركان عادل"}, {"id": "23037", "cls": "c3", "seq": 37, "name": "مريم بشار سعد الله"}, {"id": "23038", "cls": "c3", "seq": 38, "name": "مريم خضير عباس"}, {"id": "23039", "cls": "c3", "seq": 39, "name": "مريم قحطان ولي"}, {"id": "23040", "cls": "c3", "seq": 40, "name": "مريم محسن عبدالله"}, {"id": "23041", "cls": "c3", "seq": 41, "name": "مريم يوسف قادر"}, {"id": "23042", "cls": "c3", "seq": 42, "name": "مهدي صالح احمد"}, {"id": "23043", "cls": "c3", "seq": 43, "name": "مودة علي محمد"}, {"id": "23044", "cls": "c3", "seq": 44, "name": "نور علي عبد الرحمن"}, {"id": "23045", "cls": "c3", "seq": 45, "name": "نيسان نعمان حسين"}, {"id": "23046", "cls": "c3", "seq": 46, "name": "هديل محمود خلف"}, {"id": "23047", "cls": "c3", "seq": 47, "name": "هند صالح علي"}, {"id": "23048", "cls": "c3", "seq": 48, "name": "هيڤار عماد عمر"}, {"id": "23049", "cls": "c3", "seq": 49, "name": "وسن خليل ابراهيم"}, {"id": "23050", "cls": "c3", "seq": 50, "name": "وسن مطلك محمود"}, {"id": "23051", "cls": "c3", "seq": 51, "name": "ياسر عامر حمد"}, {"id": "24001", "cls": "c4", "seq": 1, "name": "ابرار فؤاد احمد"}, {"id": "24002", "cls": "c4", "seq": 2, "name": "ابراهيم حسين ابراهيم"}, {"id": "24003", "cls": "c4", "seq": 3, "name": "احمد حازم محمد"}, {"id": "24004", "cls": "c4", "seq": 4, "name": "احمد محمد فاضل"}, {"id": "24005", "cls": "c4", "seq": 5, "name": "اسراء بسام داوود"}, {"id": "24006", "cls": "c4", "seq": 6, "name": "اسماء فاضل خضير"}, {"id": "24007", "cls": "c4", "seq": 7, "name": "اية عمار محمد يوسف"}, {"id": "24008", "cls": "c4", "seq": 8, "name": "بنين محمد خالد"}, {"id": "24009", "cls": "c4", "seq": 9, "name": "جوانه سلطان عيسى"}, {"id": "24010", "cls": "c4", "seq": 10, "name": "حازم مزاحم طامي"}, {"id": "24011", "cls": "c4", "seq": 11, "name": "خديجه رسام مهدي"}, {"id": "24012", "cls": "c4", "seq": 12, "name": "دموع رعد عمر"}, {"id": "24013", "cls": "c4", "seq": 13, "name": "دنيا كوران صلاح"}, {"id": "24014", "cls": "c4", "seq": 14, "name": "رسل مصطفى حسين"}, {"id": "24015", "cls": "c4", "seq": 15, "name": "رقيه محمد صالح"}, {"id": "24016", "cls": "c4", "seq": 16, "name": "رنا احمد ابراهيم"}, {"id": "24017", "cls": "c4", "seq": 17, "name": "رنا جاسم محمد"}, {"id": "24018", "cls": "c4", "seq": 18, "name": "رهام حميد مجيد"}, {"id": "24019", "cls": "c4", "seq": 19, "name": "زينب صايغن نجم"}, {"id": "24020", "cls": "c4", "seq": 20, "name": "زينب صبحي حسن"}, {"id": "24021", "cls": "c4", "seq": 21, "name": "سما خلدون سعدون"}, {"id": "24022", "cls": "c4", "seq": 22, "name": "سوزيار مجاهد غالب"}, {"id": "24023", "cls": "c4", "seq": 23, "name": "صفوان فؤاد ياسين"}, {"id": "24024", "cls": "c4", "seq": 24, "name": "صفية باعث اسود"}, {"id": "24025", "cls": "c4", "seq": 25, "name": "عائشة فرهاد هادي"}, {"id": "24026", "cls": "c4", "seq": 26, "name": "عدي كريم محمود"}, {"id": "24027", "cls": "c4", "seq": 27, "name": "علي اكبر وهاب صالح مغير"}, {"id": "24028", "cls": "c4", "seq": 28, "name": "علي حسن علي"}, {"id": "24029", "cls": "c4", "seq": 29, "name": "عمر احمد عبد الرحمن"}, {"id": "24030", "cls": "c4", "seq": 30, "name": "غزوان محمد عيسى"}, {"id": "24031", "cls": "c4", "seq": 31, "name": "فاطمة محمد علي احمد"}, {"id": "24032", "cls": "c4", "seq": 32, "name": "فاطمة هشام صالح"}, {"id": "24033", "cls": "c4", "seq": 33, "name": "كاني به يار كريم"}, {"id": "24034", "cls": "c4", "seq": 34, "name": "ليلى ميسر مصطفى"}, {"id": "24035", "cls": "c4", "seq": 35, "name": "ماوى جهاد محمد"}, {"id": "24036", "cls": "c4", "seq": 36, "name": "محمد اسامه محمود"}, {"id": "24037", "cls": "c4", "seq": 37, "name": "محمد محمود مطر"}, {"id": "24038", "cls": "c4", "seq": 38, "name": "مروة محمد نامق"}, {"id": "24039", "cls": "c4", "seq": 39, "name": "نازلي عدنان عبد المجيد"}, {"id": "24040", "cls": "c4", "seq": 40, "name": "نبا خطيب خطاب"}, {"id": "24041", "cls": "c4", "seq": 41, "name": "نبا عبد العظيم جبار"}, {"id": "24042", "cls": "c4", "seq": 42, "name": "نزار ثامر حسن"}, {"id": "24043", "cls": "c4", "seq": 43, "name": "نضال رياض رسول"}, {"id": "24044", "cls": "c4", "seq": 44, "name": "نور جتين مصطفئ كمال"}, {"id": "24045", "cls": "c4", "seq": 45, "name": "هاجر يعرب احمد"}, {"id": "24046", "cls": "c4", "seq": 46, "name": "هبة محمود حسين"}, {"id": "24047", "cls": "c4", "seq": 47, "name": "هبه عيسى محمد"}, {"id": "24048", "cls": "c4", "seq": 48, "name": "هردي دلشاد عباس"}, {"id": "24049", "cls": "c4", "seq": 49, "name": "هيام فراس حسن"}, {"id": "24050", "cls": "c4", "seq": 50, "name": "هيثم عبدالرحمن مهاوش"}, {"id": "24051", "cls": "c4", "seq": 51, "name": "وفاء علي لطيف"}, {"id": "24052", "cls": "c4", "seq": 52, "name": "وهديل احمد كاظم"}, {"id": "24053", "cls": "c4", "seq": 53, "name": "يادكار اوات علي"}, {"id": "24054", "cls": "c4", "seq": 54, "name": "ئەوین طارق عزیز"}]};
+  var KEY = "kirkuk-chem-attendance-v1";
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var uid = function (p) { return p + Math.random().toString(36).slice(2, 8); };
+  var pad = function (n) { return String(n).padStart(2, "0"); };
+  var f2 = function (x) { return CORE.r2(x).toFixed(2); };
+  function todayISO() { var d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fmtDate(iso) { return iso ? iso.replace(/-/g, "/") : "—"; }
+  function normAr(s) { return String(s || "").replace(/[ً-ٟـ]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ة/g, "ه").replace(/[ىئ]/g, "ي").replace(/\s+/g, " ").trim(); }
+
+  /* ---------- state ---------- */
+  function defaults() {
+    return {
+      v: 1,
+      settings: { stage: "الثانية", uni: "جامعة كركوك - كلية العلوم - قسم الكيمياء", absLimit: 30, wAtt: 3, wHw: 2, wEx: 10 },
+      classes: JSON.parse(JSON.stringify(SEED.classes)),
+      students: JSON.parse(JSON.stringify(SEED.students)),
+      att: {}, hw: {}, ex: {},
+      ui: { tab: "scan", cls: SEED.classes[0].id, day: null, q: "", sfilter: "all", sq: "" }
+    };
+  }
+  var storageOK = true;
+  function load() {
+    try {
+      var t = localStorage.getItem(KEY);
+      if (t) return migrate(JSON.parse(t));
+    } catch (e) { storageOK = false; }
+    return null;
+  }
+  function migrate(s) {
+    var d = defaults();
+    s.settings = Object.assign({}, d.settings, s.settings || {});
+    s.ui = Object.assign({}, d.ui, s.ui || {});
+    s.att = s.att || {}; s.hw = s.hw || {}; s.ex = s.ex || {};
+    s.classes = s.classes && s.classes.length ? s.classes : d.classes;
+    s.classes.forEach(function (c) { c.days = c.days || []; c.hws = c.hws || []; c.exs = c.exs || []; });
+    s.students = s.students || [];
+    if (!s.classes.some(function (c) { return c.id === s.ui.cls; })) s.ui.cls = s.classes[0].id;
+    return s;
+  }
+  var S = load() || defaults();
+  var saveT = null;
+  function save() {
+    clearTimeout(saveT);
+    saveT = setTimeout(function () {
+      try { localStorage.setItem(KEY, JSON.stringify(S)); }
+      catch (e) { storageOK = false; showBanner(); }
+    }, 250);
+  }
+  function showBanner() {
+    var b = $("#banner");
+    if (!storageOK) { b.hidden = false; b.textContent = "لا يمكن حفظ البيانات داخل هذا المتصفح. صدّر نسخة احتياطية من الإعدادات بعد كل جلسة."; }
+    else b.hidden = true;
+  }
+
+  var label = function (c) { return [c.study, c.group, c.section].filter(Boolean).join("-"); };
+  var clsById = function (id) { return S.classes.find(function (c) { return c.id === id; }); };
+  var curClass = function () { return clsById(S.ui.cls) || S.classes[0]; };
+  var studentsOf = function (cid) { return S.students.filter(function (s) { return s.cls === cid; }).sort(function (a, b) { return a.seq - b.seq; }); };
+  var studentById = function (id) { return S.students.find(function (s) { return s.id === id; }); };
+
+  /* ---------- libraries (loaded when first needed) ---------- */
+  var LIBS = {
+    qr: { test: function () { return typeof qrcode === "function"; }, urls: ["https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js", "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"] },
+    jsqr: { test: function () { return typeof jsQR === "function"; }, urls: ["https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js", "https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"] },
+    xl: { test: function () { return typeof ExcelJS !== "undefined"; }, urls: ["https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js", "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"] },
+    pdf: { test: function () { return !!(window.jspdf && window.jspdf.jsPDF); }, urls: ["https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"] }
+  };
+  var pendingLib = {};
+  function ensure(k) {
+    var L = LIBS[k];
+    if (L.test()) return Promise.resolve();
+    if (pendingLib[k]) return pendingLib[k];
+    pendingLib[k] = (async function () {
+      for (var i = 0; i < L.urls.length; i++) {
+        try {
+          await new Promise(function (res, rej) {
+            var s = document.createElement("script");
+            s.src = L.urls[i]; s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+          if (L.test()) return;
+        } catch (e) { /* try next */ }
+      }
+      pendingLib[k] = null;
+      throw new Error("تعذّر تحميل مكتبة مطلوبة. تحقق من الاتصال بالإنترنت.");
+    })();
+    return pendingLib[k];
+  }
+
+  /* ---------- small UI helpers ---------- */
+  var toastT;
+  function toast(msg) {
+    var t = $("#toast");
+    t.innerHTML = "<div></div>"; t.firstChild.textContent = msg;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.innerHTML = ""; }, 3200);
+  }
+  function openModal(html, onReady) {
+    var m = $("#modal"); m.hidden = false; m.innerHTML = '<div class="box" role="dialog" aria-modal="true">' + html + "</div>";
+    if (onReady) onReady(m);
+    var f = $("input,select,button.primary", m); if (f && f.tagName !== "BUTTON") f.focus();
+  }
+  function closeModal() { var m = $("#modal"); m.hidden = true; m.innerHTML = ""; }
+  $("#modal").addEventListener("click", function (e) { if (e.target.id === "modal") closeModal(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("#modal").hidden) closeModal(); });
+  function confirmBox(msg, okText) {
+    return new Promise(function (res) {
+      openModal("<h3>تأكيد</h3><p>" + esc(msg) + '</p><div class="acts"><button class="btn" data-r="0">إلغاء</button><button class="btn primary danger-ok" data-r="1">' + esc(okText || "تأكيد") + "</button></div>", function (m) {
+        m.addEventListener("click", function h(e) {
+          var b = e.target.closest("[data-r]"); if (!b) return;
+          m.removeEventListener("click", h); closeModal(); res(b.dataset.r === "1");
+        });
+      });
+    });
+  }
+
+  var dlP = (window.claude && window.claude.use) ? window.claude.use("downloads").catch(function () { return null; }) : Promise.resolve(null);
+  async function saveBlob(name, blob) {
+    var dl = await dlP;
+    if (dl) {
+      try { await dl.save({ filename: name, data: blob }); toast("تم الحفظ: " + name); }
+      catch (e) { toast(e && e.code === "declined" ? "أُلغي الحفظ" : "تعذّر الحفظ: " + ((e && e.message) || "")); }
+      return;
+    }
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    toast("تم تنزيل " + name);
+  }
+
+  /* ---------- tabs ---------- */
+  function setTab(t) {
+    if (S.ui.tab === "scan" && t !== "scan") stopCam();
+    S.ui.tab = t; save(); render();
+  }
+  $(".tabs").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (b) setTab(b.dataset.tab); });
+  function render() {
+    $$(".tabs button").forEach(function (b) { b.setAttribute("aria-selected", b.dataset.tab === S.ui.tab ? "true" : "false"); });
+    $("#sub").textContent = S.settings.uni + " · المرحلة " + S.settings.stage;
+    showBanner();
+    var v = { scan: renderScan, grades: renderGrades, students: renderStudents, settings: renderSettings }[S.ui.tab] || renderScan;
+    v();
+  }
+
+  /* =====================================================
+     SCAN
+     ===================================================== */
+  var recent = [], lastCode = "", lastAt = 0, ac = null;
+  var stream = null, scanning = false, detector = null, camTimer = null;
+
+  function beep(kind) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = kind === "bad" ? "square" : "sine";
+      o.frequency.value = kind === "ok" ? 1040 : kind === "dup" ? 620 : 240;
+      g.gain.value = 0.16; o.start(); o.stop(ac.currentTime + (kind === "ok" ? 0.13 : 0.3));
+    } catch (e) { /* no audio */ }
+  }
+
+  function renderScan() {
+    $("#view").innerHTML =
+      '<div class="bar">' +
+      '<label class="fld"><span>الشعبة</span><select id="selClass"></select></label>' +
+      '<label class="fld"><span>المحاضرة</span><select id="selDay"></select></label>' +
+      '<button class="btn primary" id="btnNewDay">+ محاضرة اليوم</button></div>' +
+      '<div class="desk"><div class="panel res"><div class="result idle" id="result" aria-live="polite"><span>امسح بطاقة الطالب أو اكتب رمزه في الحقل.</span></div>' +
+      '<p class="count">حضر <b id="stP">0</b> من <b id="stT">0</b></p></div>' +
+      '<div class="panel cap">' +
+      '<div class="cam" id="camBox"><span id="camIdle">الكاميرا متوقفة</span></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn" id="btnCam">تشغيل الكاميرا</button>' +
+      '<label class="btn primary">مسح فيديو سريع<input type="file" accept="video/*" capture="environment" id="vidIn" hidden></label>' +
+      '<label class="btn">التقاط صورة<input type="file" accept="image/*" capture="environment" id="photoIn" hidden></label></div>' +
+      '<p class="tip">الفيديو والصورة: مرّر الكاميرا على البطاقات (يصح عدة بطاقات معاً) فيُسجَّل الجميع دفعة واحدة.</p>' +
+      '<p id="camMsg" hidden></p>' +
+      '<div class="fld" style="margin-top:14px"><span>قارئ باركود خارجي أو إدخال يدوي</span>' +
+      '<input type="text" id="codeIn" inputmode="numeric" autocomplete="off" placeholder="رمز الطالب، أو جزء من الاسم"></div>' +
+      '<div class="sugg" id="sugg"></div></div>' +
+      '<div class="panel rec"><h2>آخر المسجّلين</h2><ul id="recent"></ul></div></div>';
+
+    fillScanSelects();
+    $("#selClass").addEventListener("change", function (e) { S.ui.cls = e.target.value; S.ui.day = null; save(); fillScanSelects(); showResult("idle", "امسح بطاقة الطالب أو اكتب رمزه في الحقل."); });
+    $("#selDay").addEventListener("change", function (e) { S.ui.day = e.target.value || null; save(); updateScanStats(); renderRecent(); });
+    $("#btnNewDay").addEventListener("click", function () {
+      var c = curClass(); var d = { id: uid("d"), date: todayISO(), on: true };
+      c.days.push(d); S.ui.day = d.id; save(); fillScanSelects(); toast("تمت إضافة محاضرة " + fmtDate(d.date));
+    });
+    $("#btnCam").addEventListener("click", function () { scanning ? stopCam() : startCam(); });
+    $("#photoIn").addEventListener("change", async function (e) {
+      var f = e.target.files[0]; e.target.value = ""; if (!f) return;
+      showResult("idle", "جارٍ قراءة الصورة…");
+      try { handleBatch(await decodePhoto(f)); }
+      catch (err) { showResult("bad", "تعذّرت قراءة الصورة", err.message || ""); }
+    });
+    $("#vidIn").addEventListener("change", async function (e) {
+      var f = e.target.files[0]; e.target.value = ""; if (!f) return;
+      showResult("idle", "جارٍ تحليل الفيديو…", "0%");
+      try {
+        var codes = await decodeVideo(f, function (p, n) { showResult("idle", "جارٍ تحليل الفيديو…", p + "% · عُثر على " + n + " رمز"); });
+        handleBatch(codes);
+      } catch (err) { showResult("bad", "تعذّر تحليل الفيديو", err.message || ""); }
+    });
+    var ci = $("#codeIn");
+    ci.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      var v = ci.value.trim(); if (!v) return;
+      if (/^[0-9٠-٩۰-۹]+$/.test(v)) { handleCode(v, "manual"); ci.value = ""; $("#sugg").innerHTML = ""; }
+      else { var m = suggest(v); if (m.length === 1) { handleCode(m[0].id, "manual"); ci.value = ""; $("#sugg").innerHTML = ""; } }
+    });
+    ci.addEventListener("input", function () {
+      var v = ci.value.trim();
+      $("#sugg").innerHTML = (!v || /^[0-9٠-٩۰-۹]+$/.test(v)) ? "" :
+        suggest(v).map(function (s) { return '<button type="button" data-id="' + s.id + '"><span>' + esc(s.name) + "</span><i>" + s.id + "</i></button>"; }).join("");
+    });
+    $("#sugg").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-id]"); if (!b) return;
+      handleCode(b.dataset.id, "manual"); ci.value = ""; $("#sugg").innerHTML = "";
+    });
+    $("#recent").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-undo]"); if (!b) return;
+      var p = b.dataset.undo.split("|");
+      if (S.att[p[0]]) { delete S.att[p[0]][p[1]]; }
+      recent = recent.filter(function (r) { return !(r.sid === p[0] && r.day === p[1]); });
+      save(); updateScanStats(); renderRecent(); showResult("idle", "تم التراجع عن التسجيل.");
+    });
+    if (!matchMedia("(pointer: coarse)").matches) ci.focus();
+  }
+  function suggest(v) {
+    var q = normAr(v); var c = curClass();
+    return studentsOf(c.id).filter(function (s) { return normAr(s.name).indexOf(q) !== -1; }).slice(0, 8);
+  }
+  function fillScanSelects() {
+    var c = curClass();
+    $("#selClass").innerHTML = S.classes.map(function (k) { return '<option value="' + k.id + '"' + (k.id === c.id ? " selected" : "") + ">" + esc(label(k)) + "</option>"; }).join("");
+    if (!c.days.some(function (d) { return d.id === S.ui.day; })) S.ui.day = c.days.length ? c.days[c.days.length - 1].id : null;
+    $("#selDay").innerHTML = c.days.length ? c.days.map(function (d, i) {
+      return '<option value="' + d.id + '"' + (d.id === S.ui.day ? " selected" : "") + ">م" + (i + 1) + " · " + fmtDate(d.date) + (d.on === false ? " (موقوفة)" : "") + "</option>";
+    }).join("") : '<option value="">لا توجد محاضرات</option>';
+    updateScanStats(); renderRecent();
+  }
+  function updateScanStats() {
+    var c = curClass(), day = c.days.find(function (d) { return d.id === S.ui.day; });
+    var list = studentsOf(c.id);
+    var p = day ? list.filter(function (s) { return S.att[s.id] && S.att[s.id][day.id]; }).length : 0;
+    if ($("#stP")) { $("#stP").textContent = p; $("#stT").textContent = list.length; }
+  }
+  function renderRecent() {
+    var c = curClass();
+    var items = recent.filter(function (r) { return r.cls === c.id && r.day === S.ui.day; }).slice(0, 6);
+    $("#recent").innerHTML = items.length ? items.map(function (r) {
+      var s = studentById(r.sid);
+      return "<li><span>" + esc(s ? s.name : r.sid) + '</span><button class="lnk" data-undo="' + r.sid + "|" + r.day + '">تراجع</button></li>';
+    }).join("") : '<li class="muted">لم يُسجَّل أحد بعد في هذه المحاضرة.</li>';
+  }
+  function showResult(kind, title, sub, id) {
+    var r = $("#result"); if (!r) return;
+    r.className = "result " + kind;
+    r.innerHTML = "<b></b>" + (sub ? "<span></span>" : "") + (id ? '<span class="id"></span>' : "");
+    r.firstChild.textContent = title;
+    if (sub) r.children[1].textContent = sub;
+    if (id) r.lastChild.textContent = id;
+  }
+  function register(raw) {
+    var code = CORE.normCode(raw);
+    var st = studentById(code);
+    var c = curClass(), day = c.days.find(function (d) { return d.id === S.ui.day; });
+    if (!st) return { k: "unknown", code: code };
+    if (st.cls !== c.id) return { k: "other", st: st, other: clsById(st.cls) };
+    if (!day) return { k: "noday", st: st };
+    if (day.on === false) return { k: "off", st: st };
+    S.att[st.id] = S.att[st.id] || {};
+    if (S.att[st.id][day.id]) return { k: "dup", st: st };
+    S.att[st.id][day.id] = 1;
+    recent.unshift({ sid: st.id, day: day.id, cls: c.id });
+    return { k: "ok", st: st };
+  }
+  function handleCode(raw, src) {
+    var code = CORE.normCode(raw); if (!code) return;
+    var now = Date.now();
+    if (src === "cam" && code === lastCode && now - lastAt < 2500) return;
+    lastCode = code; lastAt = now;
+    var r = register(code);
+    if (r.k === "unknown") { showResult("bad", "رمز غير معروف", "الرمز المقروء: " + r.code); beep("bad"); return; }
+    if (r.k === "other") { showResult("dup", r.st.name, "هذا الطالب في شعبة أخرى: " + (r.other ? label(r.other) : ""), r.st.id); beep("dup"); return; }
+    if (r.k === "noday") { showResult("bad", "لا توجد محاضرة نشطة", "اضغط «محاضرة اليوم» ثم أعد المسح."); beep("bad"); return; }
+    if (r.k === "off") { showResult("bad", "المحاضرة موقوفة", "فعّلها من تبويب الدرجات."); beep("bad"); return; }
+    if (r.k === "dup") { showResult("dup", r.st.name, "مسجّل مسبقاً في هذه المحاضرة", r.st.id); beep("dup"); return; }
+    save(); showResult("ok", r.st.name, "تم تسجيل الحضور", r.st.id); beep("ok");
+    updateScanStats(); renderRecent();
+  }
+  function handleBatch(codes) {
+    codes = (codes || []).filter(Boolean);
+    if (!codes.length) { showResult("bad", "لم يُعثر على أي رمز", "قرّب البطاقات وأعد المحاولة."); beep("bad"); return; }
+    var n = { ok: [], dup: 0, other: 0, unknown: 0, blocked: 0 };
+    codes.forEach(function (cd) {
+      var r = register(cd);
+      if (r.k === "ok") n.ok.push(r.st.name); else if (r.k === "dup") n.dup++; else if (r.k === "other") n.other++; else if (r.k === "unknown") n.unknown++; else n.blocked++;
+    });
+    if (n.blocked) { showResult("bad", "لا توجد محاضرة مفعّلة", "اضغط «محاضرة اليوم» ثم أعد المسح."); beep("bad"); return; }
+    save(); updateScanStats(); renderRecent();
+    var extra = [];
+    if (n.dup) extra.push("مكرر: " + n.dup);
+    if (n.other) extra.push("شعبة أخرى: " + n.other);
+    if (n.unknown) extra.push("غير معروف: " + n.unknown);
+    if (n.ok.length) {
+      showResult("ok", "سُجّل حضور " + n.ok.length + " طالباً", n.ok.slice(0, 8).join("، ") + (n.ok.length > 8 ? " …" : ""), extra.join(" · "));
+      beep("ok");
+    } else {
+      showResult(n.dup ? "dup" : "bad", n.dup ? "الجميع مسجّلون مسبقاً" : "لا رموز صالحة", extra.join(" · ")); beep(n.dup ? "dup" : "bad");
+    }
+  }
+
+  async function startCam() {
+    var msg = $("#camMsg"); msg.hidden = true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return camFail();
+    try { await ensure("jsqr"); } catch (e) { /* BarcodeDetector may still work */ }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    } catch (e) { return camFail(); }
+    var box = $("#camBox"); box.innerHTML = '<video id="camVideo" playsinline muted></video><div class="frame"></div>';
+    var v = $("#camVideo"); v.srcObject = stream;
+    try { await v.play(); } catch (e) { /* autoplay */ }
+    try { detector = ("BarcodeDetector" in window) ? new BarcodeDetector({ formats: ["qr_code"] }) : null; } catch (e) { detector = null; }
+    scanning = true; $("#btnCam").textContent = "إيقاف الكاميرا";
+    // sound needs a user gesture: prime it here
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) { }
+    camLoop();
+  }
+  function camFail() {
+    var m = $("#camMsg"); if (!m) return;
+    m.hidden = false;
+    var secure = window.isSecureContext !== false && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    m.textContent = secure
+      ? "الكاميرا غير متاحة داخل هذه الصفحة. استخدم «مسح فيديو سريع» أو «التقاط صورة» أو قارئ الباركود."
+      : "المتصفح يمنع الكاميرا المباشرة لأن الصفحة مفتوحة من ملف على الجهاز. استخدم «مسح فيديو سريع» أو «التقاط صورة»، أو افتح الصفحة من حاسوب.";
+  }
+  function stopCam() {
+    scanning = false; clearTimeout(camTimer);
+    if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+    var box = $("#camBox"); if (box) box.innerHTML = '<span id="camIdle">الكاميرا متوقفة</span>';
+    var b = $("#btnCam"); if (b) b.textContent = "تشغيل الكاميرا";
+  }
+  var work = document.createElement("canvas");
+  function camLoop() {
+    if (!scanning) return;
+    var v = $("#camVideo");
+    var next = function () { if (scanning) camTimer = setTimeout(camLoop, 110); };
+    if (!v || v.readyState < 2 || !v.videoWidth) return next();
+    var sc = Math.min(1, 640 / v.videoWidth);
+    work.width = Math.round(v.videoWidth * sc); work.height = Math.round(v.videoHeight * sc);
+    var ctx = work.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(v, 0, 0, work.width, work.height);
+    if (detector) {
+      detector.detect(work).then(function (r) { if (r && r[0]) handleCode(r[0].rawValue, "cam"); next(); }, function () { detector = null; next(); });
+    } else if (typeof jsQR === "function") {
+      var d = ctx.getImageData(0, 0, work.width, work.height);
+      var q = jsQR(d.data, work.width, work.height, { inversionAttempts: "dontInvert" });
+      if (q && q.data) handleCode(q.data, "cam");
+      next();
+    } else next();
+  }
+  document.addEventListener("visibilitychange", function () { if (document.hidden && scanning) stopCam(); });
+  var barDet = null;
+  function getDet() {
+    if (barDet !== null) return barDet;
+    try { barDet = ("BarcodeDetector" in window) ? new BarcodeDetector({ formats: ["qr_code"] }) : false; } catch (e) { barDet = false; }
+    return barDet;
+  }
+  function blank(d, w, h, loc) {
+    var xs = [loc.topLeftCorner.x, loc.topRightCorner.x, loc.bottomLeftCorner.x, loc.bottomRightCorner.x];
+    var ys = [loc.topLeftCorner.y, loc.topRightCorner.y, loc.bottomLeftCorner.y, loc.bottomRightCorner.y];
+    var x0 = Math.max(0, Math.floor(Math.min.apply(null, xs)) - 6), x1 = Math.min(w - 1, Math.ceil(Math.max.apply(null, xs)) + 6);
+    var y0 = Math.max(0, Math.floor(Math.min.apply(null, ys)) - 6), y1 = Math.min(h - 1, Math.ceil(Math.max.apply(null, ys)) + 6);
+    for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) { var i = (y * w + x) * 4; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = 255; }
+  }
+  // every QR code found in one canvas (deep = also try inverted, and keep looking for more)
+  async function codesIn(cv, deep) {
+    var out = {}, det = getDet();
+    if (det) { try { var rs = await det.detect(cv); rs.forEach(function (x) { if (x.rawValue) out[x.rawValue] = 1; }); } catch (e) { barDet = false; } }
+    if (typeof jsQR === "function" && (deep || !Object.keys(out).length)) {
+      var ctx = cv.getContext("2d", { willReadFrequently: true });
+      var img = ctx.getImageData(0, 0, cv.width, cv.height);
+      for (var i = 0; i < (deep ? 14 : 1); i++) {
+        var q = jsQR(img.data, cv.width, cv.height, { inversionAttempts: deep ? "attemptBoth" : "dontInvert" });
+        if (!q || !q.data) break;
+        out[q.data] = 1; blank(img.data, cv.width, cv.height, q.location);
+      }
+    }
+    return Object.keys(out);
+  }
+  async function decodePhoto(file) {
+    try { await ensure("jsqr"); } catch (e) { if (!getDet()) throw e; }
+    var img = null;
+    try { img = await createImageBitmap(file); } catch (e) { img = null; }
+    if (!img) img = await new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = URL.createObjectURL(file); });
+    var found = {};
+    for (var s = 0; s < 2; s++) {
+      var sc = Math.min(1, [1800, 1000][s] / Math.max(img.width, img.height));
+      var cv = document.createElement("canvas"); cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+      cv.getContext("2d", { willReadFrequently: true }).drawImage(img, 0, 0, cv.width, cv.height);
+      (await codesIn(cv, true)).forEach(function (c) { found[c] = 1; });
+    }
+    return Object.keys(found);
+  }
+  function seekTo(v, t) {
+    return new Promise(function (res) {
+      var done = false;
+      var fin = function () { if (!done) { done = true; v.removeEventListener("seeked", fin); res(); } };
+      v.addEventListener("seeked", fin); setTimeout(fin, 2500); v.currentTime = t;
+    });
+  }
+  async function decodeVideo(file, onProgress) {
+    try { await ensure("jsqr"); } catch (e) { if (!getDet()) throw e; }
+    var url = URL.createObjectURL(file), v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = url;
+    await new Promise(function (res, rej) {
+      v.onloadeddata = res; v.onerror = function () { rej(new Error("تعذّر فتح الفيديو")); };
+      setTimeout(function () { rej(new Error("انتهت مهلة فتح الفيديو")); }, 20000);
+    });
+    var dur = isFinite(v.duration) ? v.duration : 0, found = {}, step = Math.max(0.2, dur / 500);
+    var sc = Math.min(1, 960 / Math.max(v.videoWidth, v.videoHeight)), cv = document.createElement("canvas");
+    cv.width = Math.round(v.videoWidth * sc); cv.height = Math.round(v.videoHeight * sc);
+    var ctx = cv.getContext("2d", { willReadFrequently: true });
+    for (var t = 0; t <= dur; t += step) {
+      await seekTo(v, Math.min(t, Math.max(0, dur - 0.05)));
+      ctx.drawImage(v, 0, 0, cv.width, cv.height);
+      (await codesIn(cv, false)).forEach(function (c) { found[c] = 1; });
+      if (onProgress) onProgress(Math.min(100, Math.round(t / (dur || 1) * 100)), Object.keys(found).length);
+    }
+    URL.revokeObjectURL(url);
+    return Object.keys(found);
+  }
+  // external barcode readers type like a keyboard: send stray keystrokes into the code field
+  document.addEventListener("keydown", function (e) {
+    if (S.ui.tab !== "scan" || !$("#modal").hidden) return;
+    var t = document.activeElement && document.activeElement.tagName;
+    if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key && e.key.length === 1) { var ci = $("#codeIn"); if (ci) ci.focus(); }
+  });
+
+  /* =====================================================
+     GRADES
+     ===================================================== */
+  function renderGrades() {
+    var c = curClass();
+    $("#view").innerHTML =
+      '<div class="bar">' +
+      '<label class="fld"><span>الشعبة</span><select id="gClass">' + S.classes.map(function (k) { return '<option value="' + k.id + '"' + (k.id === c.id ? " selected" : "") + ">" + esc(label(k)) + "</option>"; }).join("") + "</select></label>" +
+      '<label class="fld"><span>بحث</span><input type="search" id="gSearch" placeholder="اسم أو رمز" value="' + esc(S.ui.q) + '"></label>' +
+      '<button class="btn" data-act="addday">+ يوم حضور</button>' +
+      '<button class="btn" data-act="addhw">+ واجب</button>' +
+      '<button class="btn" data-act="addex">+ امتحان عملي</button>' +
+      '<button class="btn primary" data-act="xl-one">تصدير Excel</button>' +
+      '<button class="btn" data-act="xl-all">تصدير كل الشعب</button></div>' +
+      '<div id="gStats"></div><div id="gTable"></div>';
+    $("#gClass").addEventListener("change", function (e) { S.ui.cls = e.target.value; S.ui.day = null; save(); renderGrades(); });
+    $("#gSearch").addEventListener("input", function (e) { S.ui.q = e.target.value; renderGradesTable(); });
+    renderGradesTable();
+  }
+  function activeCount(arr) { return (arr || []).filter(function (x) { return x.on !== false; }).length; }
+
+  function gradesStats() {
+    var c = curClass(), list = studentsOf(c.id);
+    var flagged = list.filter(function (s) { return CORE.score(S, c, s.id).flagged; }).length;
+    $("#gStats").innerHTML = '<div class="chips"><span class="chip">' + list.length + " طالباً</span>" +
+      '<span class="chip">' + activeCount(c.days) + " أيام حضور مفعّلة</span>" +
+      '<span class="chip' + (flagged ? " warn" : "") + '">' + flagged + " تجاوزوا حد الغياب (" + S.settings.absLimit + "%)</span></div>" +
+      (c.days.length + c.hws.length + c.exs.length === 0 ? '<div class="hint">لم يُفتح أي عمود بعد. أضف يوم حضور أو واجباً أو امتحاناً عملياً من الأزرار أعلاه، أو سجّل الحضور من تبويب «تسجيل الحضور».</div>' : "");
+  }
+
+  function renderGradesTable() {
+    var c = curClass(), W = S.settings, q = normAr(S.ui.q);
+    var list = studentsOf(c.id).filter(function (s) { return !q || normAr(s.name).indexOf(q) !== -1 || s.id.indexOf(q) !== -1; });
+    var nd = c.days.length, nh = c.hws.length, ne = c.exs.length;
+    var old = $(".tablewrap"); var sl = old ? old.scrollLeft : 0, stp = old ? old.scrollTop : 0;
+    var h = '<div class="tablewrap"><table class="g"><thead><tr class="r1"><th class="sq" rowspan="2">ت</th><th class="nm" rowspan="2">الاسم</th>' +
+      '<th colspan="' + (nd + 1) + '">الحضور (من ' + W.wAtt + ')</th><th colspan="' + (nh + 1) + '">الواجبات (من ' + W.wHw + ')</th><th colspan="' + (ne + 1) + '">الامتحان العملي (من ' + W.wEx + ')</th>' +
+      '<th rowspan="2">المجموع<br>(من ' + (W.wAtt + W.wHw + W.wEx) + ')</th><th rowspan="2">الغياب</th></tr><tr class="r2">';
+    c.days.forEach(function (d, i) {
+      h += '<th class="' + (d.on === false ? "off" : "") + '"><div class="hd"><span>م' + (i + 1) + '</span><input type="date" value="' + esc(d.date) + '" data-act="daydate" data-id="' + d.id + '" aria-label="تاريخ المحاضرة">' +
+        '<div class="mini"><button class="onbtn" aria-pressed="' + (d.on !== false) + '" data-act="dayon" data-id="' + d.id + '">' + (d.on === false ? "موقوف" : "مفعّل") + '</button><button class="x" data-act="daydel" data-id="' + d.id + '" aria-label="حذف اليوم">×</button></div></div></th>';
+    });
+    h += "<th>الدرجة</th>";
+    c.hws.forEach(function (x) { h += itemHead("hw", x); });
+    h += "<th>الدرجة</th>";
+    c.exs.forEach(function (x) { h += itemHead("ex", x); });
+    h += "<th>الدرجة</th></tr></thead><tbody>";
+    list.forEach(function (s) { h += rowHTML(s, c); });
+    if (!list.length) h += '<tr><td colspan="' + (nd + nh + ne + 7) + '" class="muted">لا توجد نتائج.</td></tr>';
+    h += "</tbody></table></div>";
+    $("#gTable").innerHTML = h;
+    var w = $(".tablewrap"); w.scrollLeft = sl; w.scrollTop = stp;
+    gradesStats();
+  }
+  function itemHead(kind, x) {
+    return '<th class="' + (x.on === false ? "off" : "") + '"><div class="hd"><input type="text" class="ttl" value="' + esc(x.title) + '" data-act="' + kind + 'title" data-id="' + x.id + '" aria-label="العنوان">' +
+      '<div class="mini"><span>من</span><input type="number" class="mx" min="0" step="any" value="' + x.max + '" data-act="' + kind + 'max" data-id="' + x.id + '" aria-label="الدرجة العظمى"></div>' +
+      '<div class="mini"><button class="onbtn" aria-pressed="' + (x.on !== false) + '" data-act="' + kind + 'on" data-id="' + x.id + '">' + (x.on === false ? "موقوف" : "مفعّل") + '</button><button class="x" data-act="' + kind + 'del" data-id="' + x.id + '" aria-label="حذف">×</button></div></div></th>';
+  }
+  function rowHTML(s, c) {
+    var a = S.att[s.id] || {}, hw = S.hw[s.id] || {}, ex = S.ex[s.id] || {};
+    var t = '<tr data-sid="' + s.id + '"><td class="sq">' + s.seq + '</td><td class="nm" title="' + esc(s.id) + '">' + esc(s.name) + "</td>";
+    c.days.forEach(function (d) {
+      t += '<td class="att' + (a[d.id] ? " p" : "") + (d.on === false ? " off" : "") + '" tabindex="0" role="button" aria-pressed="' + (a[d.id] ? "true" : "false") + '" data-act="toggle" data-day="' + d.id + '">' + (a[d.id] ? "✓" : "·") + "</td>";
+    });
+    t += '<td class="sc c-att"></td>';
+    c.hws.forEach(function (x) { t += scoreCell("hw", x, hw[x.id]); });
+    t += '<td class="sc c-hw"></td>';
+    c.exs.forEach(function (x) { t += scoreCell("ex", x, ex[x.id]); });
+    t += '<td class="sc c-ex"></td><td class="sc c-tot"></td><td class="c-abs"></td></tr>';
+    var tmp = document.createElement("tbody"); tmp.innerHTML = t;
+    var tr = tmp.firstChild; paintRow(tr, c);
+    return tr.outerHTML;
+  }
+  function scoreCell(kind, x, v) {
+    var n = CORE.num(v);
+    var bad = n !== null && (n > x.max || n < 0);
+    return '<td class="' + (x.on === false ? "off" : "") + '"><input type="number" inputmode="decimal" step="any" min="0" value="' + (v == null || v === "" ? "" : esc(v)) + '" data-kind="' + kind + '" data-col="' + x.id + '"' + (bad ? ' class="bad"' : "") + ' aria-label="الدرجة"></td>';
+  }
+  function paintRow(tr, c) {
+    var sid = tr.dataset.sid, r = CORE.score(S, c, sid);
+    tr.classList.toggle("flag", r.flagged);
+    var set = function (sel, v) { var e = $(sel, tr); if (e) e.textContent = v; };
+    set(".c-att", r.days ? f2(r.att) : "—");
+    set(".c-hw", activeCount(c.hws) ? f2(r.hw) : "—");
+    set(".c-ex", activeCount(c.exs) ? f2(r.ex) : "—");
+    set(".c-tot", f2(r.total));
+    set(".c-abs", r.days ? Math.round(r.absPct) + "%" : "—");
+  }
+
+  function dropData(map, key) { Object.keys(map).forEach(function (sid) { if (map[sid]) delete map[sid][key]; }); }
+
+  $("#view").addEventListener("click", async function (e) {
+    var b = e.target.closest("[data-act]"); if (!b || S.ui.tab !== "grades") return;
+    var c = curClass(), act = b.dataset.act, id = b.dataset.id;
+    var item = function (arr) { return arr.find(function (x) { return x.id === id; }); };
+    if (act === "toggle") {
+      var tr = b.closest("tr"), sid = tr.dataset.sid, day = b.dataset.day;
+      S.att[sid] = S.att[sid] || {};
+      if (S.att[sid][day]) delete S.att[sid][day]; else S.att[sid][day] = 1;
+      var p = !!S.att[sid][day];
+      b.classList.toggle("p", p); b.textContent = p ? "✓" : "·"; b.setAttribute("aria-pressed", p);
+      paintRow(tr, c); gradesStats(); save(); return;
+    }
+    if (act === "addday") { c.days.push({ id: uid("d"), date: todayISO(), on: true }); }
+    else if (act === "addhw") { c.hws.push({ id: uid("h"), title: "واجب " + (c.hws.length + 1), max: 10, on: true }); }
+    else if (act === "addex") { c.exs.push({ id: uid("e"), title: "امتحان عملي " + (c.exs.length + 1), max: 10, on: true }); }
+    else if (act === "dayon") { var d = item(c.days); d.on = d.on === false; }
+    else if (act === "hwon") { var h = item(c.hws); h.on = h.on === false; }
+    else if (act === "exon") { var x = item(c.exs); x.on = x.on === false; }
+    else if (act === "daydel" || act === "hwdel" || act === "exdel") {
+      var what = act === "daydel" ? "هذا اليوم وسجل حضوره" : act === "hwdel" ? "هذا الواجب مع درجاته" : "هذا الامتحان مع درجاته";
+      if (!(await confirmBox("حذف " + what + " لجميع طلبة الشعبة؟", "حذف"))) return;
+      if (act === "daydel") { c.days = c.days.filter(function (z) { return z.id !== id; }); dropData(S.att, id); }
+      else if (act === "hwdel") { c.hws = c.hws.filter(function (z) { return z.id !== id; }); dropData(S.hw, id); }
+      else { c.exs = c.exs.filter(function (z) { return z.id !== id; }); dropData(S.ex, id); }
+    }
+    else if (act === "xl-one") { return exportExcel([c.id]); }
+    else if (act === "xl-all") { return exportExcel(S.classes.map(function (k) { return k.id; })); }
+    else return;
+    save(); renderGradesTable();
+  });
+  $("#view").addEventListener("keydown", function (e) {
+    if (S.ui.tab !== "grades") return;
+    var t = e.target;
+    if (t.matches && t.matches(".att") && (e.key === " " || e.key === "Enter")) { e.preventDefault(); t.click(); return; }
+    if (e.key === "Enter" && t.matches && t.matches("input[data-kind]")) {
+      e.preventDefault();
+      var all = $$('input[data-col="' + t.dataset.col + '"]'), i = all.indexOf(t), n = all[i + 1];
+      if (n) { n.focus(); n.select(); } else t.blur();
+    }
+  });
+  $("#view").addEventListener("change", function (e) {
+    if (S.ui.tab !== "grades") return;
+    var t = e.target, c = curClass();
+    if (t.dataset.kind) {
+      var tr = t.closest("tr"), sid = tr.dataset.sid, map = t.dataset.kind === "hw" ? S.hw : S.ex;
+      var arr = t.dataset.kind === "hw" ? c.hws : c.exs, it = arr.find(function (z) { return z.id === t.dataset.col; });
+      map[sid] = map[sid] || {};
+      var n = CORE.num(t.value);
+      if (n === null) delete map[sid][t.dataset.col]; else map[sid][t.dataset.col] = n;
+      t.classList.toggle("bad", n !== null && it && (n > it.max || n < 0));
+      paintRow(tr, c); gradesStats(); save(); return;
+    }
+    var act = t.dataset.act, id = t.dataset.id; if (!act) return;
+    if (act === "daydate") { c.days.find(function (z) { return z.id === id; }).date = t.value; save(); return; }
+    if (act === "hwtitle" || act === "extitle") { (act === "hwtitle" ? c.hws : c.exs).find(function (z) { return z.id === id; }).title = t.value; save(); return; }
+    if (act === "hwmax" || act === "exmax") {
+      var v = CORE.num(t.value); var it2 = (act === "hwmax" ? c.hws : c.exs).find(function (z) { return z.id === id; });
+      it2.max = v && v > 0 ? v : 10; save(); renderGradesTable();
+    }
+  });
+
+  /* =====================================================
+     STUDENTS + QR CARDS
+     ===================================================== */
+  function renderStudents() {
+    var f = S.ui.sfilter;
+    $("#view").innerHTML =
+      '<div class="bar">' +
+      '<label class="fld"><span>الشعبة</span><select id="sClass"><option value="all">كل الشعب</option>' + S.classes.map(function (k) { return '<option value="' + k.id + '"' + (k.id === f ? " selected" : "") + ">" + esc(label(k)) + "</option>"; }).join("") + "</select></label>" +
+      '<label class="fld"><span>بحث</span><input type="search" id="sSearch" placeholder="اسم أو رمز" value="' + esc(S.ui.sq) + '"></label>' +
+      '<button class="btn primary" data-sact="pdf">بطاقات QR (PDF)</button>' +
+      '<label class="btn">استيراد من Excel<input type="file" id="xlIn" accept=".xlsx" hidden></label></div>' +
+      '<div class="bar"><label class="fld" style="flex:1 1 220px"><span>إضافة طالب</span><input type="text" id="newName" placeholder="الاسم الكامل"></label>' +
+      '<label class="fld"><span>الشعبة</span><select id="newCls">' + S.classes.map(function (k) { return '<option value="' + k.id + '"' + (k.id === (f === "all" ? S.ui.cls : f) ? " selected" : "") + ">" + esc(label(k)) + "</option>"; }).join("") + "</select></label>" +
+      '<button class="btn" data-sact="add">إضافة</button></div>' +
+      '<div id="status"></div><div id="sList"></div>';
+    $("#sClass").addEventListener("change", function (e) { S.ui.sfilter = e.target.value; save(); renderStudents(); });
+    $("#sSearch").addEventListener("input", function (e) { S.ui.sq = e.target.value; renderStudentList(); });
+    $("#xlIn").addEventListener("change", function (e) { var fl = e.target.files[0]; e.target.value = ""; if (fl) importXlsx(fl); });
+    renderStudentList();
+  }
+  function filteredStudents() {
+    var q = normAr(S.ui.sq), f = S.ui.sfilter;
+    return S.students.filter(function (s) { return (f === "all" || s.cls === f) && (!q || normAr(s.name).indexOf(q) !== -1 || s.id.indexOf(q) !== -1); })
+      .sort(function (a, b) { var ca = clsById(a.cls), cb = clsById(b.cls); return (ca.no - cb.no) || (a.seq - b.seq); });
+  }
+  function renderStudentList() {
+    var list = filteredStudents(), all = S.ui.sfilter === "all";
+    $("#sList").innerHTML = '<div class="chips"><span class="chip">' + list.length + ' طالباً</span></div><div class="tablewrap"><table class="l"><thead><tr><th>ت</th><th>الاسم</th><th>الرمز</th>' + (all ? "<th>الشعبة</th>" : "") + "<th></th></tr></thead><tbody>" +
+      list.map(function (s) {
+        return "<tr><td>" + s.seq + "</td><td>" + esc(s.name) + '</td><td class="mono">' + s.id + "</td>" + (all ? "<td>" + esc(label(clsById(s.cls))) + "</td>" : "") +
+          '<td class="acts"><button class="lnk" data-sact="qr" data-id="' + s.id + '">QR</button><button class="lnk" data-sact="edit" data-id="' + s.id + '">تعديل</button><button class="lnk" data-sact="del" data-id="' + s.id + '">حذف</button></td></tr>';
+      }).join("") + "</tbody></table></div>";
+  }
+  $("#view").addEventListener("click", async function (e) {
+    var b = e.target.closest("[data-sact]"); if (!b || S.ui.tab !== "students") return;
+    var act = b.dataset.sact, id = b.dataset.id;
+    if (act === "add") {
+      var nm = $("#newName").value.replace(/\s+/g, " ").trim(); if (!nm) { toast("اكتب اسم الطالب أولاً"); return; }
+      var c = clsById($("#newCls").value), n = CORE.nextId(S.students, c);
+      S.students.push({ id: n.id, cls: c.id, seq: n.seq, name: nm }); save(); renderStudents(); toast("أُضيف: " + nm + " (" + n.id + ")"); return;
+    }
+    if (act === "del") {
+      var s = studentById(id);
+      if (!(await confirmBox("حذف الطالب «" + s.name + "» وجميع سجلاته؟", "حذف"))) return;
+      S.students = S.students.filter(function (z) { return z.id !== id; }); delete S.att[id]; delete S.hw[id]; delete S.ex[id];
+      save(); renderStudentList(); return;
+    }
+    if (act === "edit") {
+      var st = studentById(id);
+      openModal('<h3>تعديل الاسم</h3><label class="fld"><span>الاسم الكامل</span><input type="text" id="edName" value="' + esc(st.name) + '"></label><div class="acts"><button class="btn" data-r="0">إلغاء</button><button class="btn primary" data-r="1">حفظ</button></div>', function (m) {
+        m.addEventListener("click", function h(ev) {
+          var r = ev.target.closest("[data-r]"); if (!r) return;
+          if (r.dataset.r === "1") { var v = $("#edName").value.replace(/\s+/g, " ").trim(); if (v) { st.name = v; save(); } }
+          m.removeEventListener("click", h); closeModal(); renderStudentList();
+        });
+      });
+      return;
+    }
+    if (act === "qr") { showQR(studentById(id)); return; }
+    if (act === "pdf") { makeCards(filteredStudents()); }
+  });
+
+  /* ---- QR drawing ---- */
+  function qrMatrix(text) {
+    var q = qrcode(0, "M"); q.addData(String(text)); q.make();
+    var n = q.getModuleCount(), rows = [];
+    for (var r = 0; r < n; r++) { var row = []; for (var k = 0; k < n; k++) row.push(q.isDark(r, k)); rows.push(row); }
+    return rows;
+  }
+  function drawQR(ctx, text, x, y, size) {
+    var m = qrMatrix(text), n = m.length, quiet = 4, mod = Math.floor(size / (n + quiet * 2));
+    var total = mod * (n + quiet * 2), ox = x + Math.floor((size - total) / 2), oy = y + Math.floor((size - total) / 2);
+    ctx.fillStyle = "#fff"; ctx.fillRect(ox, oy, total, total);
+    ctx.fillStyle = "#000";
+    for (var r = 0; r < n; r++) for (var k = 0; k < n; k++) if (m[r][k]) ctx.fillRect(ox + (k + quiet) * mod, oy + (r + quiet) * mod, mod, mod);
+  }
+  async function showQR(s) {
+    try { await ensure("qr"); } catch (e) { toast(e.message); return; }
+    openModal('<div class="qrbox"><h3>' + esc(s.name) + '</h3><canvas id="qrCv" width="320" height="320"></canvas><div class="mono" style="font-family:var(--f-mono)">' + s.id + '</div><div class="muted">' + esc(label(clsById(s.cls))) + '</div></div><div class="acts"><button class="btn primary" data-r="1">إغلاق</button></div>', function (m) {
+      drawQR($("#qrCv").getContext("2d"), s.id, 0, 0, 320);
+      m.addEventListener("click", function h(ev) { if (ev.target.closest("[data-r]")) { m.removeEventListener("click", h); closeModal(); } });
+    });
+  }
+
+  /* ---- PDF cards: each A4 page is drawn on a canvas (browser shapes the Arabic text) and placed as an image ---- */
+  function wrapName(ctx, text, maxW) {
+    var words = text.split(" "), lines = [], cur = "";
+    words.forEach(function (w) {
+      var t = cur ? cur + " " + w : w;
+      if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+  async function makeCards(list) {
+    var st = $("#status");
+    if (!list.length) { toast("لا يوجد طلبة لإنشاء بطاقاتهم"); return; }
+    try { st.textContent = "جارٍ تحميل المكتبات…"; await Promise.all([ensure("qr"), ensure("pdf")]); }
+    catch (e) { st.textContent = e.message; return; }
+    try {
+      await Promise.all([document.fonts.load('700 28px "IBM Plex Sans Arabic"', "جامعة كركوك"), document.fonts.load('500 20px "IBM Plex Sans Arabic"', "جامعة كركوك")]);
+    } catch (e) { /* fallback fonts */ }
+    var PX = 8, W = 210 * PX, H = 297 * PX, COLS = 3, ROWS = 5, PER = COLS * ROWS;
+    var mx = 6 * PX, my = 6 * PX, cw = (W - 2 * mx) / COLS, ch = (H - 2 * my) / ROWS, ins = 1.5 * PX;
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    var pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    var pages = Math.ceil(list.length / PER);
+    var FONT = '"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif';
+    for (var p = 0; p < pages; p++) {
+      st.textContent = "جارٍ إنشاء الصفحة " + (p + 1) + " من " + pages + "…";
+      await new Promise(function (r) { setTimeout(r, 0); });
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+      ctx.direction = "rtl"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (var i = 0; i < PER; i++) {
+        var s = list[p * PER + i]; if (!s) break;
+        var col = i % COLS, row = Math.floor(i / COLS);
+        var x0 = mx + col * cw + ins, y0 = my + row * ch + ins, w = cw - 2 * ins, h = ch - 2 * ins, cx = x0 + w / 2;
+        ctx.strokeStyle = "#8a8a8a"; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.strokeRect(x0, y0, w, h); ctx.setLineDash([]);
+        ctx.fillStyle = "#111";
+        ctx.font = "500 19px " + FONT; ctx.fillText(S.settings.uni, cx, y0 + 26, w - 24);
+        ctx.fillStyle = "#bbb"; ctx.fillRect(x0 + 24, y0 + 46, w - 48, 2);
+        var qs = 232; drawQR(ctx, s.id, cx - qs / 2, y0 + 54, qs);
+        ctx.fillStyle = "#111"; ctx.font = "600 24px " + FONT; ctx.fillText(s.id, cx, y0 + 54 + qs + 16);
+        var size = 28; ctx.font = "700 " + size + "px " + FONT;
+        var lines = wrapName(ctx, s.name, w - 28);
+        while ((lines.length > 2 || lines.some(function (l) { return ctx.measureText(l).width > w - 28; })) && size > 18) { size -= 2; ctx.font = "700 " + size + "px " + FONT; lines = wrapName(ctx, s.name, w - 28); }
+        var ny = y0 + 54 + qs + 52;
+        lines.slice(0, 2).forEach(function (l, k) { ctx.fillText(l, cx, ny + k * (size + 6), w - 20); });
+        ctx.fillStyle = "#444"; ctx.font = "500 19px " + FONT;
+        ctx.fillText(label(clsById(s.cls)), cx, y0 + h - 18, w - 20);
+      }
+      if (p > 0) pdf.addPage("a4", "portrait");
+      pdf.addImage(cv.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, 210, 297, undefined, "FAST");
+    }
+    var one = S.ui.sfilter !== "all" && clsById(S.ui.sfilter);
+    var name = "بطاقات-QR-" + (one ? label(one) : "كل-الشعب") + ".pdf";
+    st.textContent = "";
+    await saveBlob(name, pdf.output("blob"));
+  }
+
+  /* ---- Excel import ---- */
+  function ct(cell) { try { var t = cell.text; if (t != null) return String(t).trim(); } catch (e) { } var v = cell.value; return v == null ? "" : String(v).trim(); }
+  async function importXlsx(file) {
+    var st = $("#status"); st.textContent = "جارٍ قراءة الملف…";
+    try {
+      await ensure("xl");
+      var wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+      var newCls = 0, added = 0, skipped = 0, sheets = 0;
+      wb.eachSheet(function (ws) {
+        var head = [], hr = -1, rows = [];
+        ws.eachRow({ includeEmpty: false }, function (row, rn) {
+          var a = ct(row.getCell(1)), b = ct(row.getCell(2));
+          if (hr < 0) { if (a === "ت" && b.indexOf("الاسم") !== -1) hr = rn; else { row.eachCell(function (cell) { head.push(ct(cell)); }); } }
+          else if (/^\d+$/.test(a) && b) rows.push({ seq: parseInt(a, 10), name: b.replace(/\s+/g, " ") });
+        });
+        if (hr < 0 || !rows.length) return;
+        sheets++;
+        var info = head.join("\n");
+        var g = function (re) { var m = info.match(re); return m ? m[1].trim() : ""; };
+        var study = g(/الدراسة:\s*([^|\n]+?)\s*(?:\||\n|$)/), group = g(/الكروب:\s*([^|\n]+?)\s*(?:\||\n|$)/), section = g(/الشعبة:\s*([^|\n]+?)\s*(?:\||\n|$)/);
+        if (!study && !group && !section) group = ws.name;
+        var c = S.classes.find(function (k) { return k.study === study && k.group === group && k.section === section; });
+        if (!c) {
+          c = { id: uid("c"), no: Math.max.apply(null, S.classes.map(function (k) { return k.no; }).concat([0])) + 1, study: study, group: group, section: section, days: [], hws: [], exs: [] };
+          S.classes.push(c); newCls++;
+        }
+        var have = {}; S.students.forEach(function (s) { if (s.cls === c.id) have[normAr(s.name)] = 1; });
+        rows.forEach(function (r) {
+          if (have[normAr(r.name)]) { skipped++; return; }
+          var n = CORE.nextId(S.students, c); S.students.push({ id: n.id, cls: c.id, seq: n.seq, name: r.name }); added++;
+        });
+      });
+      if (!sheets) { st.textContent = "لم يُعثر على قوائم طلبة في الملف (يلزم رأس الجدول «ت / الاسم»)."; return; }
+      save(); renderStudents();
+      $("#status").textContent = "أُضيف " + added + " طالباً" + (newCls ? " في " + newCls + " شعبة جديدة" : "") + (skipped ? "، وتم تخطي " + skipped + " اسماً موجوداً مسبقاً" : "") + ".";
+    } catch (e) { st.textContent = "تعذّر استيراد الملف: " + (e.message || e); }
+  }
+
+  /* ---- Excel export (header lines follow the department's attendance sheet) ---- */
+  async function exportExcel(ids) {
+    try { await ensure("xl"); } catch (e) { toast(e.message); return; }
+    var W = S.settings, wb = new ExcelJS.Workbook(); wb.creator = W.uni;
+    var now = new Date(), stamp = now.getFullYear() + "/" + pad(now.getMonth() + 1) + "/" + pad(now.getDate());
+    var thin = { style: "thin", color: { argb: "FF9AA7B0" } }, bd = { top: thin, left: thin, bottom: thin, right: thin };
+    var centre = { horizontal: "center", vertical: "middle", wrapText: true };
+    var names = {};
+    ids.forEach(function (cid) {
+      var c = clsById(cid); var list = studentsOf(cid);
+      var days = c.days.filter(function (d) { return d.on !== false; }), hws = c.hws.filter(function (d) { return d.on !== false; }), exs = c.exs.filter(function (d) { return d.on !== false; });
+      var nm = label(c).replace(/[\\\/\?\*\[\]:]/g, "-").slice(0, 31) || "شعبة"; var k = 2; while (names[nm]) { nm = nm.slice(0, 28) + "-" + k++; } names[nm] = 1;
+      var ws = wb.addWorksheet(nm, { views: [{ rightToLeft: true, state: "frozen", xSplit: 2, ySplit: 6 }], pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true } });
+      var N = 2 + days.length + 1 + hws.length + 1 + exs.length + 1 + 2;
+      var line = function (r, text, size) { ws.mergeCells(r, 1, r, N); var cell = ws.getCell(r, 1); cell.value = text; cell.font = { name: "Arial", bold: true, size: size }; cell.alignment = centre; ws.getRow(r).height = size + 10; };
+      line(1, W.uni, 16); line(2, "قائمة حضور الطلبة - المرحلة " + W.stage, 14);
+      line(3, "الدراسة: " + c.study + "    |    الكروب: " + c.group + "    |    الشعبة: " + c.section + "    |    عدد الطلبة: " + list.length, 12);
+      line(4, "تاريخ آخر تعديل: " + stamp, 11);
+      // header rows 5-6
+      var col = 1, hdr = [];
+      var put = function (r, cidx, v) { var cell = ws.getCell(r, cidx); cell.value = v; };
+      var fixed = function (cidx, text) { ws.mergeCells(5, cidx, 6, cidx); put(5, cidx, text); };
+      fixed(1, "ت"); fixed(2, "الاسم"); col = 3;
+      var group = function (text, kids) { var n = kids.length + 1; if (n > 1) ws.mergeCells(5, col, 5, col + n - 1); put(5, col, text); kids.forEach(function (t, i) { put(6, col + i, t); }); put(6, col + kids.length, "الدرجة"); col += n; };
+      group("الحضور (من " + W.wAtt + ")", days.map(function (d) { return fmtDate(d.date); }));
+      group("الواجبات (من " + W.wHw + ")", hws.map(function (x) { return x.title + " (من " + x.max + ")"; }));
+      group("الامتحان العملي (من " + W.wEx + ")", exs.map(function (x) { return x.title + " (من " + x.max + ")"; }));
+      fixed(col, "المجموع (من " + (W.wAtt + W.wHw + W.wEx) + ")"); fixed(col + 1, "نسبة الغياب");
+      for (var r = 5; r <= 6; r++) for (var cc = 1; cc <= N; cc++) { var hc = ws.getCell(r, cc); hc.font = { name: "Arial", bold: true, size: 11 }; hc.alignment = centre; hc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6EC" } }; hc.border = bd; }
+      ws.getRow(6).height = 34;
+      ws.getColumn(1).width = 5; ws.getColumn(2).width = 32;
+      for (var q = 3; q <= N; q++) ws.getColumn(q).width = 12;
+      list.forEach(function (s, i) {
+        var rec = CORE.score(S, c, s.id), a = S.att[s.id] || {}, hw = S.hw[s.id] || {}, ex = S.ex[s.id] || {};
+        var vals = [s.seq, s.name];
+        days.forEach(function (d) { vals.push(a[d.id] ? "ح" : "غ"); }); vals.push(days.length ? CORE.r2(rec.att) : "");
+        hws.forEach(function (x) { var v = CORE.num(hw[x.id]); vals.push(v === null ? "" : v); }); vals.push(hws.length ? CORE.r2(rec.hw) : "");
+        exs.forEach(function (x) { var v = CORE.num(ex[x.id]); vals.push(v === null ? "" : v); }); vals.push(exs.length ? CORE.r2(rec.ex) : "");
+        vals.push(CORE.r2(rec.total)); vals.push(days.length ? Math.round(rec.absPct) / 100 : "");
+        var row = ws.addRow(vals); var rn = row.number;
+        for (var z = 1; z <= N; z++) {
+          var cell = ws.getCell(rn, z); cell.border = bd; cell.alignment = z === 2 ? { horizontal: "right", vertical: "middle" } : centre; cell.font = { name: "Arial", size: 11 };
+          if (typeof cell.value === "number" && z > 2 && z < N) cell.numFmt = "0.00";
+        }
+        ws.getCell(rn, N).numFmt = "0%";
+        for (var dcol = 0; dcol < days.length; dcol++) { var dc = ws.getCell(rn, 3 + dcol); if (dc.value === "غ") dc.font = { name: "Arial", size: 11, color: { argb: "FFBF2A1F" } }; }
+        var tc = ws.getCell(rn, N - 1); tc.font = { name: "Arial", size: 11, bold: true }; tc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F1F5" } };
+        if (rec.flagged) {
+          [2, N].forEach(function (z2) { var fc = ws.getCell(rn, z2); fc.font = { name: "Arial", size: 11, bold: true, color: { argb: "FFBF2A1F" } }; fc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFDE8E6" } }; });
+        }
+      });
+      var lr = ws.rowCount + 2; ws.mergeCells(lr, 1, lr, N);
+      var lc = ws.getCell(lr, 1); lc.value = "ح = حاضر ، غ = غائب ، الأسماء بالأحمر: نسبة الغياب " + W.absLimit + "% أو أكثر."; lc.font = { name: "Arial", size: 10, italic: true }; lc.alignment = { horizontal: "right" };
+    });
+    var buf = await wb.xlsx.writeBuffer();
+    var one = ids.length === 1 ? label(clsById(ids[0])) : "كل الشعب";
+    await saveBlob("درجات-" + one + ".xlsx", new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  }
+
+  /* =====================================================
+     SETTINGS
+     ===================================================== */
+  function renderSettings() {
+    var W = S.settings;
+    $("#view").innerHTML =
+      '<div class="sect"><h2>توزيع الدرجات</h2><p>يُحسب كل قسم نسبياً من عدد الأيام والواجبات والامتحانات المفعّلة فعلاً. المجموع الحالي: <b id="sumW">' + (W.wAtt + W.wHw + W.wEx) + '</b> درجة.</p>' +
+      '<div class="grid2"><label class="fld"><span>الحضور</span><input type="number" min="0" step="any" data-set="wAtt" value="' + W.wAtt + '"></label>' +
+      '<label class="fld"><span>الواجبات</span><input type="number" min="0" step="any" data-set="wHw" value="' + W.wHw + '"></label>' +
+      '<label class="fld"><span>الامتحان العملي</span><input type="number" min="0" step="any" data-set="wEx" value="' + W.wEx + '"></label></div></div>' +
+      '<div class="sect"><h2>تنبيه الغياب</h2><p>يظهر اسم الطالب بالأحمر في الجدول والتقرير عند بلوغ هذه النسبة.</p>' +
+      '<label class="fld" style="max-width:200px"><span>نسبة الغياب (%)</span><input type="number" min="1" max="100" data-set="absLimit" value="' + W.absLimit + '"></label></div>' +
+      '<div class="sect"><h2>الترويسة</h2><div class="grid2" style="grid-template-columns:1fr 1fr"><label class="fld" style="grid-column:1/-1"><span>سطر الجامعة والكلية والقسم</span><input type="text" data-set="uni" value="' + esc(W.uni) + '"></label>' +
+      '<label class="fld"><span>المرحلة</span><input type="text" data-set="stage" value="' + esc(W.stage) + '"></label></div></div>' +
+      '<div class="sect"><h2>نسخة احتياطية</h2><p>البيانات محفوظة داخل هذا المتصفح فقط. صدّر نسخة بعد كل محاضرة، واستعدها عند تغيير الجهاز.</p>' +
+      '<div class="row"><button class="btn primary" data-fact="backup">تصدير نسخة احتياطية</button><label class="btn">استعادة نسخة<input type="file" id="bkIn" accept=".json" hidden></label><button class="btn danger" data-fact="reset">إعادة البيانات الأصلية</button></div></div>';
+    $("#bkIn").addEventListener("change", function (e) {
+      var f = e.target.files[0]; e.target.value = ""; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = async function () {
+        try {
+          var d = JSON.parse(rd.result); if (!d || !d.classes || !d.students) throw new Error("x");
+          if (!(await confirmBox("استبدال البيانات الحالية بمحتوى النسخة الاحتياطية؟", "استعادة"))) return;
+          S = migrate(d); save(); render(); toast("تمت الاستعادة");
+        } catch (err) { toast("الملف ليس نسخة احتياطية صالحة"); }
+      };
+      rd.readAsText(f);
+    });
+  }
+  $("#view").addEventListener("change", function (e) {
+    if (S.ui.tab !== "settings" || !e.target.dataset.set) return;
+    var k = e.target.dataset.set, v = e.target.value;
+    if (k === "uni" || k === "stage") { S.settings[k] = v.trim() || S.settings[k]; }
+    else {
+      var n = CORE.num(v); if (n === null || n < 0 || (k === "absLimit" && n < 1)) { e.target.value = S.settings[k]; return; }
+      S.settings[k] = n;
+    }
+    save(); $("#sub").textContent = S.settings.uni + " · المرحلة " + S.settings.stage;
+    var s = $("#sumW"); if (s) s.textContent = S.settings.wAtt + S.settings.wHw + S.settings.wEx;
+  });
+  $("#view").addEventListener("click", async function (e) {
+    var b = e.target.closest("[data-fact]"); if (!b || S.ui.tab !== "settings") return;
+    if (b.dataset.fact === "backup") {
+      var d = new Date();
+      await saveBlob("نسخة-احتياطية-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".json", new Blob([JSON.stringify(S)], { type: "application/json" }));
+    } else if (b.dataset.fact === "reset") {
+      if (await confirmBox("سيُحذف كل الحضور والدرجات وتعود قوائم الطلبة إلى ملف Excel الأصلي. المتابعة؟", "إعادة الضبط")) { S = defaults(); save(); render(); toast("أُعيدت البيانات الأصلية"); }
+    }
+  });
+
+  render();
+})();
+</script>
+
+</body></html>
